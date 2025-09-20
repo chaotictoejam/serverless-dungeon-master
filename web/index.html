@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dungeon Master Agent</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+      textarea, input { width: 100%; padding: 0.5rem; margin: 0.25rem 0; }
+      button { padding: 0.5rem 1rem; }
+      pre { white-space: pre-wrap; background: #f6f7f9; padding: 1rem; border-radius: 8px; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Dungeon Master Agent</h1>
+    <div class="row">
+      <input id="player" placeholder="Player ID" value="demo" />
+      <input id="session" placeholder="Session ID" value="sess-1" />
+    </div>
+    <textarea id="msg" rows="4" placeholder="Say something to the DM...">Start a new adventure in a desert city.</textarea>
+    <button id="send">Send</button>
+    <pre id="out">DM will reply here...</pre>
+
+    <script>
+      const API = 'REPLACE_WITH_API_URL'; // e.g., https://abc123.execute-api.us-east-1.amazonaws.com
+
+      document.getElementById('send').onclick = async () => {
+        const player = document.getElementById('player').value;
+        const session = document.getElementById('session').value;
+        const msg = document.getElementById('msg').value;
+        const out = document.getElementById('out');
+
+        out.textContent += `\nYou: ${msg}\n`;
+
+        const res = await fetch(`${API}/play`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ playerId: player, sessionId: session, inputText: msg })
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (data.reply) out.textContent += `DM: ${data.reply}\n`;
+        else out.textContent += `Error: ${JSON.stringify(data)}\n`;
+
+        document.getElementById('msg').value = '';
+      };
+    </script>
+  </body>
+</html>

@@ -12,3 +12,14 @@ This repo contains an MVP that lets players chat with a Bedrock Agent acting as 
 ## Prereqs
 - Node.js 18+ and AWS CDK v2
 - AWS account with **Amazon Bedrock** access to your chosen model
+
+## Deploy
+```bash
+cd cdk
+npm install
+# Set your Agent & Alias IDs (or pass via context)
+export AGENT_ID=REPLACE_ME_AGENT_ID
+export ALIAS_ID=REPLACE_ME_ALIAS_ID
+npm run deploy
+```
+Grab the `ApiUrl` output, paste it into `web/index.html`, and open the file to chat with your DM.
