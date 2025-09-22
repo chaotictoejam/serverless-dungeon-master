@@ -3,7 +3,7 @@ import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as lambdaNode from "aws-cdk-lib/aws-lambda-nodejs";
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
@@ -35,21 +35,25 @@ export class DmAgentStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
-    const gameActionsFn = new NodejsFunction(this, "GameActionsFn", {
-      entry: "../lambda/game-actions/index.ts",
+    const gameActionsFn = new lambdaNode.NodejsFunction(this, "GameActionsFn", {
+      entry: "./lambda/game-actions/index.ts",
       runtime: lambda.Runtime.NODEJS_20_X,
-      environment: { TABLE: table.tableName },
+      environment: { TABLE: table.tableName }
     });
     table.grantReadWriteData(gameActionsFn);
 
-    const sessionProxyFn = new NodejsFunction(this, "SessionProxyFn", {
-      entry: "../lambda/session-proxy/index.ts",
-      runtime: lambda.Runtime.NODEJS_20_X,
-      environment: {
-        AGENT_ID: props.agentId,
-        ALIAS_ID: props.aliasId,
-      },
-    });
+    const sessionProxyFn = new lambdaNode.NodejsFunction(
+      this,
+      "SessionProxyFn",
+      {
+        entry: "./lambda/session-proxy/index.ts",
+        runtime: lambda.Runtime.NODEJS_20_X,
+        environment: {
+          AGENT_ID: props.agentId,
+          ALIAS_ID: props.aliasId,
+        }
+      }
+    );
     
     // Load agent ARN from .env
     const agentArn = process.env.AGENT_ARN || "*";
