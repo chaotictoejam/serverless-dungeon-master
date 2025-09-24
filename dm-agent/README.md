@@ -4,6 +4,16 @@ This CDK project deploys the AWS infrastructure for the Serverless Dungeon Maste
 
 The `cdk.json` file tells the CDK Toolkit how to execute your app.
 
+## Setup
+Create a `.env` file in this directory with the following content, replacing the placeholders with your actual values:
+```
+ALIAS_ID=your_alias_id_here
+AGENT_ID=your_agent_id_here
+AGENT_ARN=your_agent_arn_here
+CDK_DEFAULT_ACCOUNT=your_aws_account_number
+CDK_DEFAULT_REGION=us-east-1
+```
+
 ## Useful commands
 
 * `npm run build`   compile typescript to js
