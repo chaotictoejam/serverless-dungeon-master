@@ -16,7 +16,6 @@ export class DmAgentStack extends cdk.Stack {
     // Configuration
     const fmId = this.node.tryGetContext("fmId") || process.env.FM_ID || "anthropic.claude-3-5-sonnet-20240620-v2:0";
     const agentName = this.node.tryGetContext("agentName") || process.env.AGENT_NAME || "DungeonMaster";
-    const functionSchema = require("./function-schema.json");
 
     // DynamoDB Table
     const table = new dynamodb.Table(this, "DmGameState", {
@@ -73,7 +72,36 @@ export class DmAgentStack extends cdk.Stack {
         actionGroupName: "GameActions",
         description: "Game state operations (DynamoDB-backed)",
         actionGroupExecutor: { lambda: gameActionsFn.functionArn },
-        functionSchema: { functions: functionSchema.functions },
+        functionSchema: {
+          functions: [
+            {
+              name: "get_character",
+              description: "Fetch a player character by playerId + sessionId",
+              parameters: {
+                playerId: { type: "string", description: "Player identifier", required: true },
+                sessionId: { type: "string", description: "Session identifier", required: true },
+              },
+            },
+            {
+              name: "save_character",
+              description: "Save/replace the player character",
+              parameters: {
+                playerId: { type: "string", description: "Player identifier", required: true },
+                sessionId: { type: "string", description: "Session identifier", required: true },
+                character: { type: "object", description: "Character data", required: true },
+              },
+            },
+            {
+              name: "append_log",
+              description: "Append a narrative log entry to world state",
+              parameters: {
+                playerId: { type: "string", description: "Player identifier", required: true },
+                sessionId: { type: "string", description: "Session identifier", required: true },
+                entry: { type: "string", description: "Log entry text", required: true },
+              },
+            },
+          ],
+        },
         actionGroupState: "ENABLED",
       }],
     });
