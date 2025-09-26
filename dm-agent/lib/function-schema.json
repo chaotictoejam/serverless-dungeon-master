@@ -1,0 +1,42 @@
+{
+  "functions": [
+    {
+      "name": "get_character",
+      "description": "Fetch a player character by playerId + sessionId",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "playerId": { "type": "string" },
+          "sessionId": { "type": "string" }
+        },
+        "required": ["playerId", "sessionId"]
+      }
+    },
+    {
+      "name": "save_character",
+      "description": "Save/replace the player character",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "playerId": { "type": "string" },
+          "sessionId": { "type": "string" },
+          "character": { "type": "object" }
+        },
+        "required": ["playerId", "sessionId", "character"]
+      }
+    },
+    {
+      "name": "append_log",
+      "description": "Append a narrative log entry to world state",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "playerId": { "type": "string" },
+          "sessionId": { "type": "string" },
+          "entry": { "type": "string" }
+        },
+        "required": ["playerId", "sessionId", "entry"]
+      }
+    }
+  ]
+}
