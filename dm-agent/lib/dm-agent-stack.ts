@@ -14,7 +14,7 @@ export class DmAgentStack extends cdk.Stack {
     super(scope, id, props);
 
     // Configuration
-    const fmId = this.node.tryGetContext("fmId") || process.env.FM_ID || "anthropic.claude-3-5-sonnet-20240620-v2:0";
+    const fmId = this.node.tryGetContext("fmId") || process.env.FM_ID || "anthropic.claude-3-5-sonnet-20241022-v2:0";
     const agentName = this.node.tryGetContext("agentName") || process.env.AGENT_NAME || "DungeonMaster";
 
     // DynamoDB Table
@@ -43,115 +43,63 @@ export class DmAgentStack extends cdk.Stack {
     });
     table.grantReadWriteData(gameActionsFn);
 
-    // Bedrock Agent IAM Role
-    const agentServiceRole = new iam.Role(this, "AgentServiceRole", {
-      assumedBy: new iam.ServicePrincipal("bedrock.amazonaws.com", {
-        conditions: { StringEquals: { "aws:SourceAccount": cdk.Aws.ACCOUNT_ID } },
-      }),
-      description: "Service role for Agents for Amazon Bedrock to invoke models and call tools",
+    // AgentCore orchestration Lambda
+    const agentCoreFn = new lambdaNode.NodejsFunction(this, "AgentCoreFn", {
+      entry: "./lambda/agent-core/index.ts",
+      runtime: lambda.Runtime.NODEJS_20_X,
+      timeout: cdk.Duration.minutes(5),
+      environment: {
+        TABLE: table.tableName,
+        GAME_ACTIONS_FUNCTION: gameActionsFn.functionName,
+        FOUNDATION_MODEL: fmId,
+      },
     });
-    agentServiceRole.addToPolicy(new iam.PolicyStatement({
+    
+    // Grant permissions for AgentCore
+    agentCoreFn.addToRolePolicy(new iam.PolicyStatement({
       actions: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
       resources: ["*"],
     }));
-
-    // Bedrock Agent
-    const agent = new bedrock.CfnAgent(this, "DmAgent", {
-      agentName,
-      foundationModel: fmId,
-      agentResourceRoleArn: agentServiceRole.roleArn,
-      instruction: [
-        "You are an AI Dungeon Master. Run safe, imaginative adventures for one player or a party.",
-        "Style: concise narration + clear choices. Never reveal tools or raw JSON.",
-        "When you need to read or persist game state, call the GameActions tools.",
-        "Default to PG-13 content; avoid explicit or unsafe material.",
-      ].join(" "),
-      idleSessionTtlInSeconds: 900,
-      autoPrepare: true,
-      actionGroups: [{
-        actionGroupName: "GameActions",
-        description: "Game state operations (DynamoDB-backed)",
-        actionGroupExecutor: { lambda: gameActionsFn.functionArn },
-        functionSchema: {
-          functions: [
-            {
-              name: "get_character",
-              description: "Fetch a player character by playerId + sessionId",
-              parameters: {
-                playerId: { type: "string", description: "Player identifier", required: true },
-                sessionId: { type: "string", description: "Session identifier", required: true },
-              },
-            },
-            {
-              name: "save_character",
-              description: "Save/replace the player character",
-              parameters: {
-                playerId: { type: "string", description: "Player identifier", required: true },
-                sessionId: { type: "string", description: "Session identifier", required: true },
-                character: { type: "string", description: "Character data as JSON string", required: true },
-              },
-            },
-            {
-              name: "append_log",
-              description: "Append a narrative log entry to world state",
-              parameters: {
-                playerId: { type: "string", description: "Player identifier", required: true },
-                sessionId: { type: "string", description: "Session identifier", required: true },
-                entry: { type: "string", description: "Log entry text", required: true },
-              },
-            },
-          ],
-        },
-        actionGroupState: "ENABLED",
-      }],
-    });
-
-    // Lambda permissions for Bedrock
-    gameActionsFn.addPermission("AllowBedrockInvoke", {
-      principal: new iam.ServicePrincipal("bedrock.amazonaws.com"),
-      action: "lambda:InvokeFunction",
-      sourceAccount: cdk.Aws.ACCOUNT_ID,
-      sourceArn: agent.attrAgentArn,
-    });
-
-    // Bedrock Agent Alias
-    const alias = new bedrock.CfnAgentAlias(this, "DmAgentAlias", {
-      agentId: agent.attrAgentId,
-      agentAliasName: "prod",
-      description: "Primary alias for DM agent",
-    });
+    
+    agentCoreFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ["lambda:InvokeFunction"],
+      resources: [gameActionsFn.functionArn],
+    }));
+    
+    table.grantReadWriteData(agentCoreFn);
 
     // Session Proxy Lambda
     const sessionProxyFn = new lambdaNode.NodejsFunction(this, "SessionProxyFn", {
       entry: "./lambda/session-proxy/index.ts",
       runtime: lambda.Runtime.NODEJS_20_X,
       environment: {
-        AGENT_ID: agent.attrAgentId,
-        ALIAS_ID: alias.attrAgentAliasId,
+        AGENT_CORE_FUNCTION: agentCoreFn.functionName,
       },
     });
     sessionProxyFn.addToRolePolicy(new iam.PolicyStatement({
-      actions: ["bedrock:InvokeAgent", "bedrock:InvokeAgentWithResponseStream"],
-      resources: [
-        // Use the exact FM ARN for your region if possible for least privilege:
-        // e.g., `arn:aws:bedrock:${cdk.Aws.REGION}::foundation-model/anthropic.claude-3-5-sonnet-20240620-v2:0`
-        '*', // ← tighten to your FM ARN when you finalize the model choice
-        ],
+      actions: ["lambda:InvokeFunction"],
+      resources: [agentCoreFn.functionArn],
     }));
 
     // API Gateway
-    const api = new apigwv2.HttpApi(this, "DmApi", { apiName: "dm-agent-api" });
+    const api = new apigwv2.HttpApi(this, "DmApi", {
+      apiName: "dm-agent-api",
+      corsPreflight: {
+        allowOrigins: ["*"],
+        allowMethods: [apigwv2.CorsHttpMethod.POST, apigwv2.CorsHttpMethod.OPTIONS],
+        allowHeaders: ["content-type"],
+      },
+    });
+    
     api.addRoutes({
       path: "/play",
-      methods: [apigwv2.HttpMethod.POST],
+      methods: [apigwv2.HttpMethod.POST, apigwv2.HttpMethod.OPTIONS],
       integration: new integrations.HttpLambdaIntegration("PlayIntegration", sessionProxyFn),
     });
 
     // Outputs
     new cdk.CfnOutput(this, "ApiUrl", { value: api.apiEndpoint! });
     new cdk.CfnOutput(this, "AssetsBucket", { value: bucket.bucketName });
-    new cdk.CfnOutput(this, "AgentId", { value: agent.attrAgentId });
-    new cdk.CfnOutput(this, "AgentArn", { value: agent.attrAgentArn });
-    new cdk.CfnOutput(this, "AgentAliasId", { value: alias.attrAgentAliasId });
+    new cdk.CfnOutput(this, "AgentCoreFunctionName", { value: agentCoreFn.functionName });
   }
 }

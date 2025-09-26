@@ -17,10 +17,31 @@ function ok(body: any) {
   return { response: body, messageVersion: '1.0' };
 }
 
-export const handler = async (event: AgentEvent) => {
+export const handler = async (event: any) => {
   console.log('Received action event:', JSON.stringify(event));
+  
+  // Handle direct Lambda invocation from AgentCore
+  if (event.body && typeof event.body === 'string') {
+    const body = JSON.parse(event.body);
+    const fn = body.action;
+    const params = { ...body };
+    delete params.action;
+    
+    const result = await executeAction(fn, params);
+    return {
+      statusCode: 200,
+      body: JSON.stringify(result)
+    };
+  }
+  
+  // Handle Bedrock Agent format (legacy)
   const fn = event.function ?? event.name ?? 'unknown';
   const params = toParamMap(event.parameters);
+  
+  return ok(await executeAction(fn, params));
+};
+
+async function executeAction(fn: string, params: any) {
 
   if (fn === 'get_character') {
     const { playerId, sessionId } = params;
@@ -28,7 +49,7 @@ export const handler = async (event: AgentEvent) => {
       TableName: TABLE,
       Key: { playerId, sessionId },
     }));
-    return ok({ character: res.Item?.character ?? null, world: res.Item?.world ?? null });
+    return { character: res.Item?.character ?? null, world: res.Item?.world ?? null };
   }
 
   if (fn === 'save_character') {
@@ -39,7 +60,7 @@ export const handler = async (event: AgentEvent) => {
       UpdateExpression: 'SET character = :c, lastUpdated = :t',
       ExpressionAttributeValues: { ':c': character, ':t': Date.now() },
     }));
-    return ok({ status: 'saved' });
+    return { status: 'saved' };
   }
 
   if (fn === 'append_log') {
@@ -51,8 +72,8 @@ export const handler = async (event: AgentEvent) => {
         'SET world.logs = list_append(if_not_exists(world.logs, :empty), :e), lastUpdated = :t',
       ExpressionAttributeValues: { ':e': [entry], ':empty': [], ':t': Date.now() },
     }));
-    return ok({ status: 'logged' });
+    return { status: 'logged' };
   }
 
-  return ok({ notice: `Unknown function: ${fn}`, echo: params });
+  return { notice: `Unknown function: ${fn}`, echo: params };
 };
