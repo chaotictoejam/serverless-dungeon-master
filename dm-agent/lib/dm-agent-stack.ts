@@ -88,7 +88,7 @@ export class DmAgentStack extends cdk.Stack {
               parameters: {
                 playerId: { type: "string", description: "Player identifier", required: true },
                 sessionId: { type: "string", description: "Session identifier", required: true },
-                character: { type: "object", description: "Character data", required: true },
+                character: { type: "string", description: "Character data as JSON string", required: true },
               },
             },
             {
