@@ -14,7 +14,7 @@ export class DmAgentStack extends cdk.Stack {
     super(scope, id, props);
 
     // Configuration
-    const fmId = this.node.tryGetContext("fmId") || process.env.FM_ID || "anthropic.claude-3-5-sonnet-20241022-v2:0";
+    const fmId = this.node.tryGetContext("fmId") || process.env.FM_ID || "us.anthropic.claude-3-5-sonnet-20241022-v2:0";
     const agentName = this.node.tryGetContext("agentName") || process.env.AGENT_NAME || "DungeonMaster";
 
     // DynamoDB Table
