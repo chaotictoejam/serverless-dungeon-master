@@ -33,15 +33,23 @@
 
         out.textContent += `\nYou: ${msg}\n`;
 
-        const res = await fetch(`${API}/play`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ playerId: player, sessionId: session, inputText: msg })
-        });
-        const data = await res.json().catch(() => ({}));
-
-        if (data.reply) out.textContent += `DM: ${data.reply}\n`;
-        else out.textContent += `Error: ${JSON.stringify(data)}\n`;
+        try {
+          const res = await fetch(`${API}/play`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerId: player, sessionId: session, inputText: msg })
+          });
+          
+          const data = await res.json();
+          
+          if (data.reply) {
+            out.textContent += `DM: ${data.reply}\n`;
+          } else {
+            out.textContent += `Error: ${JSON.stringify(data)}\n`;
+          }
+        } catch (error) {
+          out.textContent += `Network Error: ${error.message}\n`;
+        }
 
         document.getElementById('msg').value = '';
       };

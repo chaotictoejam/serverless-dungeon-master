@@ -125,6 +125,7 @@ export class DmAgentStack extends cdk.Stack {
     const sessionProxyFn = new lambdaNode.NodejsFunction(this, "SessionProxyFn", {
       entry: "./lambda/session-proxy/index.ts",
       runtime: lambda.Runtime.NODEJS_20_X,
+      timeout: cdk.Duration.seconds(30), //Default is 3s, likely too short for Bedrock calls
       environment: {
         AGENT_ID: agent.attrAgentId,
         ALIAS_ID: alias.attrAgentAliasId,
@@ -140,7 +141,14 @@ export class DmAgentStack extends cdk.Stack {
     }));
 
     // API Gateway
-    const api = new apigwv2.HttpApi(this, "DmApi", { apiName: "dm-agent-api" });
+    const api = new apigwv2.HttpApi(this, "DmApi", { 
+      apiName: "dm-agent-api",
+      corsPreflight: {
+        allowOrigins: ['*'],
+        allowMethods: [apigwv2.CorsHttpMethod.POST, apigwv2.CorsHttpMethod.OPTIONS, apigwv2.CorsHttpMethod.GET],
+        allowHeaders: ['Content-Type', 'Accept']
+      }
+    });
     api.addRoutes({
       path: "/play",
       methods: [apigwv2.HttpMethod.POST],
