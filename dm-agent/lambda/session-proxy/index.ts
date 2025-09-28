@@ -1,7 +1,7 @@
 import { APIGatewayProxyHandlerV2 } from 'aws-lambda';
 import { BedrockAgentRuntimeClient, InvokeAgentCommand } from '@aws-sdk/client-bedrock-agent-runtime';
 
-const bedrockAgent = new BedrockAgentRuntimeClient({});
+const bedrockAgent = new BedrockAgentRuntimeClient({ region: "us-east-1" }); // Adjust region as needed 
 const AGENT_ID = process.env.AGENT_ID!;
 const ALIAS_ID = process.env.ALIAS_ID!;
 
@@ -50,7 +50,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
       inputText: contextualInput
     });
     
-    console.log('Invoking agent with:', { agentId: AGENT_ID, aliasId: ALIAS_ID, sessionId });
+    console.log('Invoking agent with:', { agentId: AGENT_ID, aliasId: ALIAS_ID, sessionId, inputText: contextualInput });
     const response = await bedrockAgent.send(cmd);
     console.log('Agent response received:', { hasCompletion: !!response.completion });
     
