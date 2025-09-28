@@ -39,13 +39,13 @@ Player → API Gateway → Lambda (session-proxy) → Bedrock Agent
 ### 1. Clone and Install
 ```bash
 git clone <repository-url>
-cd serverless-dungeon-master/cdk
+cd serverless-dungeon-master/dm-agent
 npm install
 ```
 
 ### 2. Deploy Infrastructure
 ```bash
-npm run deploy
+npx cdk deploy
 ```
 
 ### 3. Configure Web Client
@@ -73,9 +73,10 @@ The DM agent supports these core actions:
 
 ```
 serverless-dungeon-master/
-├── cdk/                    # AWS CDK infrastructure code
+├── dm-agent/              # AWS CDK infrastructure code
 │   ├── lib/               # Stack definitions
-│   └── lambda/            # Lambda function source
+│   ├── lambda/            # Lambda function source
+│   └── bin/               # CDK app entry point
 ├── web/                   # Static web client
 │   ├── index.html        # Game interface
 │   └── serve.py          # Local development server
