@@ -30,6 +30,7 @@ Player → API Gateway → Lambda (session-proxy) → Bedrock Agent
 ## Prerequisites
 
 - **Node.js 20+** and **AWS CDK v2**
+- **Python 3.8+** (for local development server) - you can also use the VS Code Extension - Live Server
 - **AWS Account** with Amazon Bedrock access enabled
 - **Bedrock Model Access**: Ensure your account has access to your chosen foundation model
 - **AWS CLI** configured with appropriate permissions
