@@ -29,7 +29,7 @@ Player → API Gateway → Lambda (session-proxy) → Bedrock Agent
 
 ## Prerequisites
 
-- **Node.js 18+** and **AWS CDK v2**
+- **Node.js 20+** and **AWS CDK v2**
 - **AWS Account** with Amazon Bedrock access enabled
 - **Bedrock Model Access**: Ensure your account has access to your chosen foundation model
 - **AWS CLI** configured with appropriate permissions
