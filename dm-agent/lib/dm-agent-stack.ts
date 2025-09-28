@@ -14,7 +14,10 @@ export class DmAgentStack extends cdk.Stack {
     super(scope, id, props);
 
     // Configuration
-    const fmId = this.node.tryGetContext("fmId") || process.env.FM_ID || "us.anthropic.claude-3-5-sonnet-20241022-v2:0";
+    const fmId =
+      this.node.tryGetContext("fmId") ||
+      process.env.FM_ID ||
+      "us.anthropic.claude-3-7-sonnet-20250219-v1:0"; //Change to your preferred FM
     const agentName = this.node.tryGetContext("agentName") || process.env.AGENT_NAME || "DungeonMaster";
 
     // DynamoDB Table
@@ -50,10 +53,18 @@ export class DmAgentStack extends cdk.Stack {
       }),
       description: "Service role for Agents for Amazon Bedrock to invoke models and call tools",
     });
-    agentServiceRole.addToPolicy(new iam.PolicyStatement({
-      actions: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
-      resources: ["*"],
-    }));
+    agentServiceRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream",
+          "bedrock:CreateInferenceProfile",
+          "bedrock:GetInferenceProfile",
+          "bedrock:GetFoundationModel",
+        ],
+        resources: ["*"],
+      })
+    );
 
     // Bedrock Agent
     const agent = new bedrock.CfnAgent(this, "DmAgent", {
@@ -125,7 +136,7 @@ export class DmAgentStack extends cdk.Stack {
     const sessionProxyFn = new lambdaNode.NodejsFunction(this, "SessionProxyFn", {
       entry: "./lambda/session-proxy/index.ts",
       runtime: lambda.Runtime.NODEJS_20_X,
-      timeout: cdk.Duration.seconds(30), //Default is 3s, likely too short for Bedrock calls
+      timeout: cdk.Duration.seconds(60), //Default is 3s, likely too short for Bedrock calls
       environment: {
         AGENT_ID: agent.attrAgentId,
         ALIAS_ID: alias.attrAgentAliasId,

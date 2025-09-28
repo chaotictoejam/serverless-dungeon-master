@@ -10,8 +10,8 @@ const TABLE = process.env.TABLE!;
 
 type AgentParam = { name?: string; key?: string; value: any };
 type AgentEvent = {
-  function?: string;
-  name?: string;
+  actionGroup: string;
+  function: string;
   parameters?: AgentParam[];
 };
 
@@ -21,26 +21,28 @@ function toParamMap(params?: AgentParam[]) {
   return Object.fromEntries(entries);
 }
 
-function ok(body: any, functionName: string) {
-  const response = {
+function ok(functionName: string, body: any) {
+  return {
     messageVersion: "1.0",
     response: {
       actionGroup: "GameActions",
       function: functionName,
       functionResponse: {
-        responseBody: body
-      }
-    }
+        responseBody: {
+          TEXT: {
+            body: JSON.stringify(body),
+          },
+        },
+      },
+    },
   };
-  console.log('Returning response:', JSON.stringify(response, null, 2));
-  return response;
 }
 
 export const handler = async (event: AgentEvent) => {
   console.log("Received action event:", JSON.stringify(event));
 
   try {
-    const fn = event.function ?? event.name ?? "unknown";
+    const fn = event.function;
     const params = toParamMap(event.parameters);
 
     if (fn === "get_character") {
@@ -52,10 +54,10 @@ export const handler = async (event: AgentEvent) => {
         })
       );
       const character = res.Item?.playerCharacter ? JSON.parse(res.Item.playerCharacter) : null;
-      return ok({
+      return ok(fn, {
         character: character,
         world: res.Item?.world ?? null,
-      }, "get_character");
+      });
     }
 
     if (fn === "save_character") {
@@ -70,7 +72,7 @@ export const handler = async (event: AgentEvent) => {
         })
       );
       console.log('Character saved successfully');
-      return ok({ status: "saved" }, "save_character");
+      return ok(fn, { status: "saved" });
     }
 
     if (fn === "append_log") {
@@ -90,12 +92,12 @@ export const handler = async (event: AgentEvent) => {
           },
         })
       );
-      return ok({ status: "logged" }, "append_log");
+      return ok(fn, { status: "logged" });
     }
 
-    return ok({ notice: `Unknown function: ${fn}`, echo: params }, fn);
+    return ok(fn, { notice: `Unknown function: ${fn}`, echo: params });
   } catch (error: any) {
     console.error("Error in game actions:", error);
-    return ok({ error: error.message || "Unknown error" }, "error");
+    return ok(event.function || "unknown", { error: error.message || "Unknown error" });
   }
 };
