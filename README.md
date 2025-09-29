@@ -2,6 +2,8 @@
 
 A Simple POC Bedrock-powered AI agent that runs entirely on Lambda + DynamoDB to act as a real-time Dungeon Master for tabletop or RPG campaigns. It remembers player choices, generates storylines on the fly, and adapts difficulty levels — all serverlessly.
 
+View detailed blog post on [dev.to](https://dev.to/aws-builders/building-a-serverless-dungeon-master-agent-on-aws-3j7k)
+
 ## Features
 
 - **Persistent Character Management**: Create and save character sheets with stats, inventory, and progression
